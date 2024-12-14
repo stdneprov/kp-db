@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список Игр</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .game-list {
+            list-style: none;
+            padding: 0;
+        }
+        .game-item {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .game-item h2 {
+            margin: 0 0 10px 0;
+        }
+        .game-details {
+            margin-bottom: 10px;
+        }
+        .game-links a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #007BFF;
+        }
+        .game-links a:hover {
+            text-decoration: underline;
+        }
+        .error {
+            color: red;
+            margin-top: 20px;
+        }
+        .loading {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">Игры</a>
+        <a href="/consoles">Консоли</a>
+        <a href="/companies">Компании</a>
+        <a href="/genres">Жанры</a>
+        <a href="/users">Пользователи</a>
+    </div>
+    <h1>Список Игр</h1>
+    <button id="loadGames">Загрузить список</button>
+    <div id="status"></div>
+    <a id="add-game-a" href="/createGame">add</a>
+    <ul class="game-list" id="gameList"></ul>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const addGameLink = document.getElementById("add-game-a");
+            const authToken = localStorage.getItem("authToken");
+
+            if (!authToken) {
+                addGameLink.style.display = "none"; // Скрыть ссылку, если токен отсутствует
+                return;
+            }
+
+            // Функция для декодирования JWT
+            function parseJwt(token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(
+                        atob(base64)
+                            .split('')
+                            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                            .join('')
+                    );
+                    return JSON.parse(jsonPayload);
+                } catch (error) {
+                    console.error("Ошибка декодирования токена:", error);
+                    return null;
+                }
+            }
+
+            const decodedToken = parseJwt(authToken);
+
+            if (!decodedToken) {
+                addGameLink.style.display = "none"; // Скрыть ссылку, если токен некорректен
+                return;
+            }
+
+            // Проверяем, есть ли у пользователя роль admin или super_admin
+            const userRoles = decodedToken.roles || []; // Предполагается, что роли хранятся в свойстве `roles`
+            console.log(decodedToken)
+            if (decodedToken.role == 'admin' || decodedToken.role == 'super_admin') {
+                addGameLink.style.display = "inline"; // Показать ссылку, если роль подходит
+            } else {
+                addGameLink.style.display = "none"; // Скрыть ссылку, если роль не подходит
+            }
+        });
+
+        document.getElementById('loadGames').addEventListener('click', async () => {
+            const authToken = localStorage.getItem('authToken');
+            const statusDiv = document.getElementById('status');
+            const gameList = document.getElementById('gameList');
+
+            // Очистка предыдущего содержимого
+            gameList.innerHTML = '';
+            statusDiv.textContent = '';
+
+            if (!authToken) {
+                statusDiv.textContent = "Токен аутентификации не найден в localStorage!";
+                statusDiv.className = 'error';
+                return;
+            }
+
+            statusDiv.textContent = "Загрузка...";
+            statusDiv.className = 'loading';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/games', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error("Неавторизованный доступ. Проверьте токен.");
+                    } else {
+                        throw new Error(`Ошибка HTTP! Статус: ${response.status}`);
+                    }
+                }
+
+                const games = await response.json();
+
+                if (!Array.isArray(games)) {
+                    throw new Error("Неверный формат данных от сервера.");
+                }
+
+                if (games.length === 0) {
+                    statusDiv.textContent = "Игры не найдены.";
+                    statusDiv.className = '';
+                    return;
+                }
+
+                function parseJwt(token) {
+                    try {
+                        const base64Url = token.split('.')[1];
+                        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                        const jsonPayload = decodeURIComponent(
+                            atob(base64)
+                                .split('')
+                                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                                .join('')
+                        );
+                        return JSON.parse(jsonPayload);
+                    } catch (error) {
+                        console.error("Ошибка декодирования токена:", error);
+                        return null;
+                    }
+                }
+
+                const decodedToken = parseJwt(authToken);
+
+                games.forEach(game => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('game-item');
+
+                    const title = document.createElement('h2');
+                    title.textContent = `${game.title} (ID: ${game.id})`;
+                    listItem.appendChild(title);
+
+                    const details = document.createElement('div');
+                    details.classList.add('game-details');
+                    details.innerHTML = 
+                        `
+                        <strong>Описание:</strong> ${game.description}<br>
+                        <strong>Консоль:</strong> ${game.console}<br>
+                        <strong>Компания:</strong> ${game.company}<br>
+                        <strong>Жанр:</strong> ${game.genre}<br>
+                        `
+                    ;
+                    listItem.appendChild(details);
+
+                    gameList.appendChild(listItem);
+                });
+
+                statusDiv.textContent = `Загружено ${games.length} игр.`;
+                statusDiv.className = '';
+            } catch (error) {
+                console.error('Ошибка при загрузке игр:', error);
+                statusDiv.textContent = `Ошибка: ${error.message}`;
+                statusDiv.className = 'error';
+            }
+        });
+
+    </script>
+</body>
+</html>

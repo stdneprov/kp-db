@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Company</title>
+</head>
+<body>
+  <h1>Create a New Company</h1>
+  <a href="/companies">Back</a>
+  <form id="gameForm">
+    <div>
+      <label for="title">Title:</label>
+      <input type="text" id="title" name="title" maxlength="255" required>
+    </div>
+    <div>
+      <label for="description">Description:</label>
+      <input type="textarea" id="description" name="description">
+    </div>
+    <button type="submit">Create Company</button>
+  </form>
+
+  <div id="responseMessage"></div>
+
+  <script>
+    document.getElementById("gameForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const title = document.getElementById("title").value;
+  const description = document.getElementById("description").value;
+
+
+  const payload = {
+    title,
+    description
+  };
+
+  try {
+    // Получение токена из localStorage
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      document.getElementById("responseMessage").innerText = "Error: No auth token found. Please log in.";
+      return;
+    }
+    console.log(`Bearer ${authToken}`)
+
+    const response = await fetch("/api/companies", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`, // Прокидываем токен в заголовок
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById("responseMessage").innerText = `Game created successfully: ${JSON.stringify(data)}`;
+    } else {
+      const error = await response.json();
+      document.getElementById("responseMessage").innerText = `Error: ${error.detail}`;
+    }
+  } catch (error) {
+    document.getElementById("responseMessage").innerText = `Error: ${error.message}`;
+  }
+});
+  </script>
+</body>
+</html>

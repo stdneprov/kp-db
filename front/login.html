@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <form id="loginForm">
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" name="username" required><br><br>
+
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" name="password" required><br><br>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <div id="message" style="color: red;"></div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async function (event) {
+            event.preventDefault(); // Останавливаем стандартное поведение формы
+
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            // Проверка заполненности полей
+            if (!username || !password) {
+                document.getElementById("message").textContent = "Please fill in all fields.";
+                return;
+            }
+
+            // Отправка данных на сервер
+            try {
+                const response = await fetch("http://127.0.01:8000/api/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const token = data.access_token; // Предполагается, что сервер возвращает токен в поле `token`
+
+                    // Сохраняем токен в localStorage
+                    localStorage.setItem("authToken", token);
+
+                    document.getElementById("message").textContent = "Login successful!";
+                    // Перенаправление после успешного входа
+                    window.location.href = "/";
+                } else {
+                    const error = await response.json();
+                    document.getElementById("message").textContent = error.detail || "Login failed.";
+                }
+            } catch (error) {
+                document.getElementById("message").textContent = "An error occurred. Please try again.";
+            }
+        });
+    </script>
+</body>
+</html>

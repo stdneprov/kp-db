@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create User</title>
+</head>
+<body>
+  <h1>Create a New User</h1>
+  <a href="/users">Back</a>
+  <form id="gameForm">
+    <div>
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" maxlength="255" required>
+    </div>
+    <div>
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+    <div>
+      <label for="role">Role:</label>
+      <select id="role" name="role" required>
+        <option value="user" selected>Пользователь</option>
+        <option value="admin">Администратор</option>
+        <option value="super_admin">Главный администратор</option>
+      </select>
+    </div>
+    <button type="submit">Create user</button>
+  </form>
+
+  <div id="responseMessage"></div>
+
+  <script>
+    document.getElementById("gameForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const role = document.getElementById("role").value;
+
+
+  const payload = {
+    username,
+    password,
+    role
+  };
+
+  try {
+    // Получение токена из localStorage
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      document.getElementById("responseMessage").innerText = "Error: No auth token found. Please log in.";
+      return;
+    }
+    console.log(`Bearer ${authToken}`)
+
+    const response = await fetch("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`, // Прокидываем токен в заголовок
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById("responseMessage").innerText = `Game created successfully: ${JSON.stringify(data)}`;
+    } else {
+      const error = await response.json();
+      document.getElementById("responseMessage").innerText = `Error: ${error.detail}`;
+    }
+  } catch (error) {
+    document.getElementById("responseMessage").innerText = `Error: ${error.message}`;
+  }
+});
+  </script>
+</body>
+</html>
